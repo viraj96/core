@@ -1265,12 +1265,7 @@ class View {
 	 * @return \OC\User\User
 	 */
 	private function getUserObjectForOwner($ownerId) {
-		$owner = $this->userManager->get($ownerId);
-		if ($owner instanceof IUser) {
-			return $owner;
-		} else {
-			return new User($ownerId, null);
-		}
+		return $this->userManager->get($ownerId);
 	}
 
 	/**
