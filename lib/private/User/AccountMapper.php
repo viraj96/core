@@ -63,15 +63,14 @@ class AccountMapper extends Mapper {
 	 * @param string $pattern
 	 * @param integer $limit
 	 * @param integer $offset
-	 * @param boolean $orderBy
 	 * @return Account[]
 	 */
-	public function search($fieldName, $pattern, $limit, $offset, $orderBy = true) {
+	public function search($fieldName, $pattern, $limit, $offset) {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from($this->getTableName())
 			->where($qb->expr()->iLike($fieldName, $qb->createNamedParameter('%' . $this->db->escapeLikeParameter($pattern) . '%')))
-			->orderBy($fieldName, $orderBy ? 'ASC' : 'DESC');
+			->orderBy($fieldName);
 
 		return $this->findEntities($qb->getSQL(), $qb->getParameters(), $limit, $offset);
 	}
@@ -117,9 +116,12 @@ class AccountMapper extends Mapper {
 	public function callForAllUsers($callback, $search, $onlySeen) {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select(['*'])
-			->from($this->getTableName())
-			->addOrderBy('ASC');
+			->from($this->getTableName());
 
+		if ($search) {
+			$qb->where($qb->expr()->iLike('user_id',
+				$qb->createNamedParameter('%' . $this->db->escapeLikeParameter($search) . '%')));
+		}
 		if ($onlySeen) {
 			$qb->where($qb->expr()->isNotNull('last_login'));
 		}
