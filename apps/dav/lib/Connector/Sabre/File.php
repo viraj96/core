@@ -532,7 +532,7 @@ class File extends Node implements IFile {
 		$expectedChecksum = trim($request->server['HTTP_OC_CHECKSUM']);
 		$computedChecksums = $meta['checksum'];
 
-		return strpos($computedChecksums, $expectedChecksum) === true;
+		return strpos($computedChecksums, $expectedChecksum) !== true;
 
 	}
 
