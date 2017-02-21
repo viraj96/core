@@ -23,6 +23,10 @@ class Version20170214112458 implements ISchemaMigration {
 			'notnull' => true,
 			'length' => 255,
 		]);
+		$table->addColumn('lower_user_id', Type::STRING, [
+			'notnull' => true,
+			'length' => 255,
+		]);
 		$table->addColumn('display_name', Type::STRING, [
 			'notnull' => false,
 			'length' => 255,

@@ -52,9 +52,10 @@ class AccountMapper extends Mapper {
 	 */
 	public function getByUid($uid) {
 		$qb = $this->db->getQueryBuilder();
+		$parameter = (string)$qb->createNamedParameter($uid);
 		$qb->select('*')
 			->from($this->getTableName())
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($uid)));
+			->where($qb->expr()->eq('lower_user_id', $qb->createFunction("LOWER($parameter)")));
 
 		return $this->findEntity($qb->getSQL(), $qb->getParameters());
 	}
