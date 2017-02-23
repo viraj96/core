@@ -182,6 +182,10 @@ class User implements IUser {
 		// get the home now because it won't return it after user deletion
 		$homePath = $this->getHome();
 		$this->mapper->delete($this->account);
+		$bi = $this->account->getBackendInstance();
+		if (!is_null($bi)) {
+			$bi->deleteUser($this->account->getUserId());
+		}
 
 		// FIXME: Feels like an hack - suggestions?
 
