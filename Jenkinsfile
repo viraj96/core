@@ -132,7 +132,9 @@ timestampedNode('SLAVE') {
 			rm -rf config/config.php data/*
 			./occ maintenance:install --admin-pass=admin
 			make clean-test-integration
-			make test-integration
+		#	make test-integration
+		# FIXME: TEMP: for testing on Jenkins
+			make test-integration OC_TEST_ALT_HOME=1 OC_TEST_ENCRYPTION_MASTER_KEY_ENABLED=1
 		   '''
 		}
 
