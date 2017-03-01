@@ -462,6 +462,56 @@ class DefaultShareProvider implements IShareProvider {
 	/**
 	 * @inheritdoc
 	 */
+	public function getAllSharesBy($userId, $shareTypes, $node, $reshares) {
+		$qb = $this->dbConn->getQueryBuilder();
+		$qb->select('*')
+			->from('share')
+			->andWhere($qb->expr()->orX(
+				$qb->expr()->eq('item_type', $qb->createNamedParameter('file')),
+				$qb->expr()->eq('item_type', $qb->createNamedParameter('folder'))
+			));
+
+		$orX = $qb->expr()->orX();
+
+		foreach ($shareTypes as $shareType) {
+			$orX->add($qb->expr()->eq('share_type', $qb->createNamedParameter($shareType)));
+		}
+
+		$qb->andWhere($orX);
+
+		/**
+		 * Reshares for this user are shares where they are the owner.
+		 */
+		if ($reshares === false) {
+			$qb->andWhere($qb->expr()->eq('uid_initiator', $qb->createNamedParameter($userId)));
+		} else {
+			$qb->andWhere(
+				$qb->expr()->orX(
+					$qb->expr()->eq('uid_owner', $qb->createNamedParameter($userId)),
+					$qb->expr()->eq('uid_initiator', $qb->createNamedParameter($userId))
+				)
+			);
+		}
+
+		if ($node !== null) {
+			$qb->andWhere($qb->expr()->eq('file_source', $qb->createNamedParameter($node->getId())));
+		}
+
+		$qb->orderBy('id');
+
+		$cursor = $qb->execute();
+		$shares = [];
+		while($data = $cursor->fetch()) {
+			$shares[] = $this->createShare($data);
+		}
+		$cursor->closeCursor();
+
+		return $shares;
+	}
+
+	/**
+	 * @inheritdoc
+	 */
 	public function getSharesBy($userId, $shareType, $node, $reshares, $limit, $offset) {
 		$qb = $this->dbConn->getQueryBuilder();
 		$qb->select('*')

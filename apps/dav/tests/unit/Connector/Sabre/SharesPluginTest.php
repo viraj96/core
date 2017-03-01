@@ -22,6 +22,8 @@
  */
 namespace OCA\DAV\Tests\unit\Connector\Sabre;
 
+use OCP\Share\IShare;
+
 class SharesPluginTest extends \Test\TestCase {
 
 	const SHARETYPES_PROPERTYNAME = \OCA\DAV\Connector\Sabre\SharesPlugin::SHARETYPES_PROPERTYNAME;
@@ -100,20 +102,31 @@ class SharesPluginTest extends \Test\TestCase {
 			->with('/subdir')
 			->will($this->returnValue($node));
 
+		$requestedShareTypes = [
+			\OCP\Share::SHARE_TYPE_USER,
+			\OCP\Share::SHARE_TYPE_GROUP,
+			\OCP\Share::SHARE_TYPE_LINK,
+			\OCP\Share::SHARE_TYPE_REMOTE
+		];
+
 		$this->shareManager->expects($this->any())
-			->method('getSharesBy')
+			->method('getAllSharesBy')
 			->with(
 				$this->equalTo('user1'),
-				$this->anything(),
-				$this->anything(),
-				$this->equalTo(false),
-				$this->equalTo(1)
+				$requestedShareTypes,
+				$this->anything()
 			)
-			->will($this->returnCallback(function($userId, $requestedShareType, $node, $flag, $limit) use ($shareTypes){
-				if (in_array($requestedShareType, $shareTypes)) {
-					return ['dummyshare'];
+			->will($this->returnCallback(function($userId, $requestedShareTypes, $node) use ($shareTypes){
+				$allShares = array();
+				foreach($requestedShareTypes as $requestedShareType){
+					$share = $this->createMock(IShare::class);
+					$share->method('getShareType')->willReturn($requestedShareType);
+					if (in_array($requestedShareType, $shareTypes)) {
+						array_push($allShares, $share);
+					}
 				}
-				return [];
+
+				return $allShares;
 			}));
 
 		$propFind = new \Sabre\DAV\PropFind(
@@ -190,21 +203,31 @@ class SharesPluginTest extends \Test\TestCase {
 			->with('/subdir')
 			->will($this->returnValue($node));
 
+		$requestedShareTypes = [
+			\OCP\Share::SHARE_TYPE_USER,
+			\OCP\Share::SHARE_TYPE_GROUP,
+			\OCP\Share::SHARE_TYPE_LINK,
+			\OCP\Share::SHARE_TYPE_REMOTE
+		];
+		
 		$this->shareManager->expects($this->any())
-			->method('getSharesBy')
+			->method('getAllSharesBy')
 			->with(
 				$this->equalTo('user1'),
-				$this->anything(),
-				$this->anything(),
-				$this->equalTo(false),
-				$this->equalTo(1)
+				$requestedShareTypes,
+				$this->anything()
 			)
-			->will($this->returnCallback(function($userId, $requestedShareType, $node, $flag, $limit) use ($shareTypes){
-				if ($node->getId() === 111 && in_array($requestedShareType, $shareTypes)) {
-					return ['dummyshare'];
+			->will($this->returnCallback(function($userId, $requestedShareTypes, $node) use ($shareTypes){
+				$allShares = array();
+				foreach($requestedShareTypes as $requestedShareType){
+					$share = $this->createMock(IShare::class);
+					$share->method('getShareType')->willReturn($requestedShareType);
+					if (in_array($requestedShareType, $shareTypes)) {
+						array_push($allShares, $share);
+					}
 				}
 
-				return [];
+				return $allShares;
 			}));
 
 		// simulate sabre recursive PROPFIND traversal

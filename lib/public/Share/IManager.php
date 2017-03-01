@@ -90,6 +90,18 @@ interface IManager {
 	 * Get shares shared by (initiated) by the provided user.
 	 *
 	 * @param string $userId
+	 * @param int[] $shareTypes
+	 * @param Node $path
+	 * @param bool $reshares
+	 * @return IShare[]
+	 * @since 10.0.0
+	 */
+	public function getAllSharesBy($userId, $shareTypes, $path, $reshares = false);
+	
+	/**
+	 * Get shares shared by (initiated) by the provided user.
+	 *
+	 * @param string $userId
 	 * @param int $shareType
 	 * @param Node|null $path
 	 * @param bool $reshares

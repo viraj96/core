@@ -564,6 +564,16 @@ class FederatedShareProvider implements IShareProvider {
 	/**
 	 * @inheritdoc
 	 */
+	public function getAllSharesBy($userId, $shareTypes, $node, $reshares) {
+		// In federates sharing currently we have only one share_type_remote
+		$limit = 1;
+		$offset = 0;
+		return $this->getSharesBy($userId, self::SHARE_TYPE_REMOTE, $node, $reshares, $limit, $offset);
+	}
+	
+	/**
+	 * @inheritdoc
+	 */
 	public function getSharesBy($userId, $shareType, $node, $reshares, $limit, $offset) {
 		$qb = $this->dbConnection->getQueryBuilder();
 		$qb->select('*')

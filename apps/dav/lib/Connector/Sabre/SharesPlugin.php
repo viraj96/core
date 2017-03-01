@@ -118,20 +118,23 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 			\OCP\Share::SHARE_TYPE_LINK,
 			\OCP\Share::SHARE_TYPE_REMOTE
 		];
-		foreach ($requestedShareTypes as $requestedShareType) {
-			// one of each type is enough to find out about the types
-			$shares = $this->shareManager->getSharesBy(
-				$this->userId,
-				$requestedShareType,
-				$node,
-				false,
-				1
-			);
-			if (!empty($shares)) {
-				$shareTypes[] = $requestedShareType;
+
+		$allShares = $this->shareManager->getAllSharesBy(
+			$this->userId,
+			$requestedShareTypes,
+			$node
+		);
+
+		if ($allShares != null) {
+			foreach ($allShares as $share) {
+				$shareType = $share->getShareType();
+				if (in_array($shareType, $requestedShareTypes)) {
+					$shareTypes[$shareType] = true;
+				}
 			}
 		}
-		return $shareTypes;
+		
+		return array_keys($shareTypes);
 	}
 
 	/**

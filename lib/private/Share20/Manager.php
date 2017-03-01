@@ -876,6 +876,67 @@ class Manager implements IManager {
 		$provider->move($share, $recipientId);
 	}
 
+
+	/**
+	 * @inheritdoc
+	 */
+	public function getAllSharesBy($userId, $shareTypes, $node, $reshares = false) {
+		// This function requires correct path
+		if (!($node instanceof \OCP\Files\File) &&
+			!($node instanceof \OCP\Files\Folder)) {
+			throw new \InvalidArgumentException('invalid path');
+		}
+		// This will ensure that if there are multiple share providers for the same share type, we will execute it in batches
+		$shares = array();
+		$providerMap = array();
+		foreach ($shareTypes as $shareType) {
+			// Get provider and its ID, at this point provider is cached at IProviderFactory instance
+			$provider = $this->factory->getProviderForType($shareType);
+			$providerId = $provider->identifier();
+
+			// Create a key -> multi value map
+			if (!isset($providerMap[$providerId])) {
+				$providerMap[$providerId] = array();
+			}
+			array_push($providerMap[$providerId], $shareType);
+		}
+
+		foreach ($providerMap as $providerId => $shareTypeArray) {
+			// Get provider from cache
+			$provider = $this->factory->getProvider($providerId);
+			if (sizeof($shareTypeArray) === 1) {
+				$limit = 1;
+				$offset = 0;
+				$queriedShares = $provider->getSharesBy($userId, $shareTypeArray[0], $node, $reshares, $limit, $offset);
+			} else {
+				$queriedShares = $provider->getAllSharesBy($userId, $shareTypeArray, $node, $reshares);
+			}
+			foreach ($queriedShares as $queriedShare){
+				array_push($shares, $queriedShare);
+			}
+		}
+
+		// Ensure to delete expired shares. Please note that here $node is obligatory and we will receive only shares belonging to one node
+		$shares2 = [];
+		$today = new \DateTime();
+		foreach ($shares as $share) {
+			// Check if the share is expired and if so delete it
+			if ($share->getShareType() === \OCP\Share::SHARE_TYPE_LINK && $share->getExpirationDate() !== null &&
+				$share->getExpirationDate() <= $today
+			) {
+				try {
+					$this->deleteShare($share);
+				} catch (NotFoundException $e) {
+					//Ignore since this basically means the share is deleted
+				}
+				continue;
+			}
+			$shares2[] = $share;
+		}
+
+		return $shares2;
+	}
+
 	/**
 	 * @inheritdoc
 	 */
