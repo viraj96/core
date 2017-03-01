@@ -243,25 +243,34 @@ class Manager extends PublicEmitter implements IGroupManager {
 
 	/**
 	 * @param \OC\User\User|null $user
+	 * @param string $scope scope
 	 * @return \OC\Group\Group[]
 	 */
-	public function getUserGroups($user) {
+	public function getUserGroups($user, $scope = null) {
 		if (is_null($user)) {
 			return [];
 		}
-		return $this->getUserIdGroups($user->getUID());
+		return $this->getUserIdGroups($user->getUID(), $scope);
 	}
 
 	/**
 	 * @param string $uid the user id
+	 * @param string $scope scope
 	 * @return \OC\Group\Group[]
 	 */
-	public function getUserIdGroups($uid) {
-		if (isset($this->cachedUserGroups[$uid])) {
-			return $this->cachedUserGroups[$uid];
+	public function getUserIdGroups($uid, $scope = null) {
+		// disable caching when scope is used
+		if ($scope === null) {
+			if (isset($this->cachedUserGroups[$uid])) {
+				return $this->cachedUserGroups[$uid];
+			}
 		}
 		$groups = [];
 		foreach ($this->backends as $backend) {
+			if ($scope !== null && !$backend->isVisibleForScope($scope)) {
+				// skip backend
+				continue;
+			}
 			$groupIds = $backend->getUserGroups($uid);
 			if (is_array($groupIds)) {
 				foreach ($groupIds as $groupId) {
@@ -274,8 +283,10 @@ class Manager extends PublicEmitter implements IGroupManager {
 				}
 			}
 		}
-		$this->cachedUserGroups[$uid] = $groups;
-		return $this->cachedUserGroups[$uid];
+		if ($scope === null) {
+			$this->cachedUserGroups[$uid] = $groups;
+		}
+		return $groups;
 	}
 
 	/**
@@ -300,12 +311,13 @@ class Manager extends PublicEmitter implements IGroupManager {
 	/**
 	 * get a list of group ids for a user
 	 * @param \OC\User\User $user
+	 * @param string $scope
 	 * @return array with group ids
 	 */
-	public function getUserGroupIds($user) {
+	public function getUserGroupIds($user, $scope = null) {
 		return array_map(function($value) {
 			return (string) $value;
-		}, array_keys($this->getUserGroups($user)));
+		}, array_keys($this->getUserGroups($user, $scope)));
 	}
 
 	/**
