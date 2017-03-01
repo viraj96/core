@@ -218,9 +218,13 @@ class Manager extends PublicEmitter implements IGroupManager {
 	 * @param int $offset
 	 * @return \OC\Group\Group[]
 	 */
-	public function search($search, $limit = null, $offset = null) {
+	public function search($search, $limit = null, $offset = null, $scope = null) {
 		$groups = [];
 		foreach ($this->backends as $backend) {
+			if ($scope !== null && !$backend->isVisibleForScope($scope)) {
+				// skip backend
+				continue;
+			}
 			$groupIds = $backend->getGroups($search, $limit, $offset);
 			foreach ($groupIds as $groupId) {
 				$aGroup = $this->get($groupId);

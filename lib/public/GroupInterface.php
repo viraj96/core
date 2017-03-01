@@ -116,4 +116,12 @@ interface GroupInterface {
 	 */
 	public function usersInGroup($gid, $search = '', $limit = -1, $offset = 0);
 
+	/**
+	 * Returns whether the groups are visible for a given scope.
+	 *
+	 * @param string $scope scope string
+	 * @return bool true if searchable, false otherwise
+	 */
+	public function isVisibleForScope($scope);
+
 }

@@ -89,10 +89,11 @@ interface IGroupManager {
 	 * @param string $search
 	 * @param int $limit
 	 * @param int $offset
+	 * @param string $scope
 	 * @return \OCP\IGroup[]
 	 * @since 8.0.0
 	 */
-	public function search($search, $limit = null, $offset = null);
+	public function search($search, $limit = null, $offset = null, $scope = null);
 
 	/**
 	 * @param \OCP\IUser|null $user
