@@ -259,33 +259,46 @@ class Manager extends PublicEmitter implements IGroupManager {
 	 * @return \OC\Group\Group[]
 	 */
 	public function getUserIdGroups($uid, $scope = null) {
-		// disable caching when scope is used
-		if ($scope === null) {
-			if (isset($this->cachedUserGroups[$uid])) {
-				return $this->cachedUserGroups[$uid];
-			}
-		}
-		$groups = [];
-		foreach ($this->backends as $backend) {
-			if ($scope !== null && !$backend->isVisibleForScope($scope)) {
-				// skip backend
-				continue;
-			}
-			$groupIds = $backend->getUserGroups($uid);
-			if (is_array($groupIds)) {
-				foreach ($groupIds as $groupId) {
-					$aGroup = $this->get($groupId);
-					if (!is_null($aGroup)) {
-						$groups[$groupId] = $aGroup;
-					} else {
-						\OC::$server->getLogger()->debug('User "' . $uid . '" belongs to deleted group: "' . $groupId . '"', array('app' => 'core'));
-					}
+		// gather the list of backends that opt out of the given scope, if given
+		$excludedBackendsForScope = [];
+		if ($scope !== null) {
+			foreach ($this->backends as $backend) {
+				if ($scope !== null && !$backend->isVisibleForScope($scope)) {
+					$excludedBackendsForScope[] = $backend;
 				}
 			}
 		}
-		if ($scope === null) {
-			$this->cachedUserGroups[$uid] = $groups;
+
+		if (!isset($this->cachedUserGroups[$uid])) {
+			$groups = [];
+
+			foreach ($this->backends as $backend) {
+				$groupIds = $backend->getUserGroups($uid);
+				if (is_array($groupIds)) {
+					foreach ($groupIds as $groupId) {
+						$aGroup = $this->get($groupId);
+						if (!is_null($aGroup)) {
+							$groups[$groupId] = $aGroup;
+						} else {
+							\OC::$server->getLogger()->debug('User "' . $uid . '" belongs to deleted group: "' . $groupId . '"', array('app' => 'core'));
+						}
+					}
+				}
+			}
+			if ($scope === null) {
+				$this->cachedUserGroups[$uid] = $groups;
+			}
+		} else {
+			$groups = $this->cachedUserGroups[$uid];
 		}
+
+		// filter out groups that must be omitted for the given scope
+		if (!empty($excludedBackendsForScope)) {
+			return array_filter($groups, function($group) use ($excludedBackendsForScope) {
+				return !in_array($group->getBackend(), $excludedBackendsForScope);
+			});
+		}
+
 		return $groups;
 	}
 

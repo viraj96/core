@@ -297,4 +297,14 @@ class Group implements IGroup {
 		}
 		return $users;
 	}
+
+	/**
+	 * Returns the backend for this group
+	 *
+	 * @return \OC\Group\Backend
+	 * @since 10.0.0
+	 */
+	public function getBackend() {
+		return current($this->backends);
+	}
 }
