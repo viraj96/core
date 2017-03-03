@@ -305,6 +305,8 @@ class Group implements IGroup {
 	 * @since 10.0.0
 	 */
 	public function getBackend() {
+		// multiple backends can exist for the same group name,
+		// but in practice there is only a single one, so return that one
 		return current($this->backends);
 	}
 }

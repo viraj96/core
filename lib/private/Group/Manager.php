@@ -221,7 +221,7 @@ class Manager extends PublicEmitter implements IGroupManager {
 	public function search($search, $limit = null, $offset = null, $scope = null) {
 		$groups = [];
 		foreach ($this->backends as $backend) {
-			if ($scope !== null && !$backend->isVisibleForScope($scope)) {
+			if (!$backend->isVisibleForScope($scope)) {
 				// skip backend
 				continue;
 			}
@@ -254,21 +254,44 @@ class Manager extends PublicEmitter implements IGroupManager {
 	}
 
 	/**
+	 * Gathers a list of backends that opt out of the given scope.
+	 *
+	 * @param string|null $scope scope string
+	 * @return \OCP\GroupInterface[] excluded backends
+	 */
+	private function getExcludedBackendsForScope($scope) {
+		$excludedBackendsForScope = [];
+		foreach ($this->backends as $backend) {
+			if (!$backend->isVisibleForScope($scope)) {
+				$excludedBackendsForScope[] = $backend;
+			}
+		}
+		return $excludedBackendsForScope;
+	}
+
+	/**
+	 * Filter groups by backends that opt-out of the given scope
+	 *
+	 * @param \OCP\IGroup[] $groups groups to filter
+	 * @param string|null $scope scope string
+	 * @return \OCP\IGroup[] filtered groups
+	 */
+	private function filterExcludedBackendsForScope($groups, $scope) {
+		$excludedBackendsForScope = $this->getExcludedBackendsForScope($scope);
+		if (!empty($excludedBackendsForScope)) {
+			return array_filter($groups, function($group) use ($excludedBackendsForScope) {
+				return !in_array($group->getBackend(), $excludedBackendsForScope);
+			});
+		}
+		return $groups;
+	}
+
+	/**
 	 * @param string $uid the user id
 	 * @param string $scope scope
 	 * @return \OC\Group\Group[]
 	 */
 	public function getUserIdGroups($uid, $scope = null) {
-		// gather the list of backends that opt out of the given scope, if given
-		$excludedBackendsForScope = [];
-		if ($scope !== null) {
-			foreach ($this->backends as $backend) {
-				if ($scope !== null && !$backend->isVisibleForScope($scope)) {
-					$excludedBackendsForScope[] = $backend;
-				}
-			}
-		}
-
 		if (!isset($this->cachedUserGroups[$uid])) {
 			$groups = [];
 
@@ -285,21 +308,13 @@ class Manager extends PublicEmitter implements IGroupManager {
 					}
 				}
 			}
-			if ($scope === null) {
-				$this->cachedUserGroups[$uid] = $groups;
-			}
+			$this->cachedUserGroups[$uid] = $groups;
 		} else {
 			$groups = $this->cachedUserGroups[$uid];
 		}
 
 		// filter out groups that must be omitted for the given scope
-		if (!empty($excludedBackendsForScope)) {
-			return array_filter($groups, function($group) use ($excludedBackendsForScope) {
-				return !in_array($group->getBackend(), $excludedBackendsForScope);
-			});
-		}
-
-		return $groups;
+		return $this->filterExcludedBackendsForScope($groups, $scope);
 	}
 
 	/**

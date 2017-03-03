@@ -121,6 +121,8 @@ interface GroupInterface {
 	 *
 	 * @param string $scope scope string
 	 * @return bool true if searchable, false otherwise
+	 *
+	 * @since 10.0.0
 	 */
 	public function isVisibleForScope($scope);
 
