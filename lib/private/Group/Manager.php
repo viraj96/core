@@ -213,10 +213,11 @@ class Manager extends PublicEmitter implements IGroupManager {
 	}
 
 	/**
-	 * @param string $search
-	 * @param int $limit
-	 * @param int $offset
-	 * @return \OC\Group\Group[]
+	 * @param string $search search string
+	 * @param int|null $limit limit
+	 * @param int|null $offset offset
+	 * @param string|null $scope scope string
+	 * @return \OC\Group\Group[] groups
 	 */
 	public function search($search, $limit = null, $offset = null, $scope = null) {
 		$groups = [];
@@ -242,8 +243,8 @@ class Manager extends PublicEmitter implements IGroupManager {
 	}
 
 	/**
-	 * @param \OC\User\User|null $user
-	 * @param string $scope scope
+	 * @param \OC\User\User|null $user user
+	 * @param string|null $scope scope string
 	 * @return \OC\Group\Group[]
 	 */
 	public function getUserGroups($user, $scope = null) {
@@ -288,7 +289,7 @@ class Manager extends PublicEmitter implements IGroupManager {
 
 	/**
 	 * @param string $uid the user id
-	 * @param string $scope scope
+	 * @param string|null $scope scope string
 	 * @return \OC\Group\Group[]
 	 */
 	public function getUserIdGroups($uid, $scope = null) {
@@ -339,7 +340,7 @@ class Manager extends PublicEmitter implements IGroupManager {
 	/**
 	 * get a list of group ids for a user
 	 * @param \OC\User\User $user
-	 * @param string $scope
+	 * @param string|null $scope string
 	 * @return array with group ids
 	 */
 	public function getUserGroupIds($user, $scope = null) {
