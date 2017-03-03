@@ -36,6 +36,7 @@ use OC\Share20\Exception\InvalidShare;
 use OCP\Share\Exceptions\ShareNotFound;
 use OCP\Files\NotFoundException;
 use OCP\IDBConnection;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Files\Node;
 
 /**
@@ -564,11 +565,52 @@ class FederatedShareProvider implements IShareProvider {
 	/**
 	 * @inheritdoc
 	 */
-	public function getAllSharesBy($userId, $shareTypes, $node, $reshares) {
+	public function getAllSharesBy($userId, $shareTypes, $nodeIDs, $reshares) {
 		// In federates sharing currently we have only one share_type_remote
-		$limit = 1;
-		$offset = 0;
-		return $this->getSharesBy($userId, self::SHARE_TYPE_REMOTE, $node, $reshares, $limit, $offset);
+		$qb = $this->dbConnection->getQueryBuilder();
+		$qb->select('*')
+			->from('share');
+
+		$qb->andWhere($qb->expr()->eq('share_type', $qb->createNamedParameter(self::SHARE_TYPE_REMOTE)));
+
+		/**
+		 * Reshares for this user are shares where they are the owner.
+		 */
+		if ($reshares === false) {
+			//Special case for old shares created via the web UI
+			$or1 = $qb->expr()->andX(
+				$qb->expr()->eq('uid_owner', $qb->createNamedParameter($userId)),
+				$qb->expr()->isNull('uid_initiator')
+			);
+
+			$qb->andWhere(
+				$qb->expr()->orX(
+					$qb->expr()->eq('uid_initiator', $qb->createNamedParameter($userId)),
+					$or1
+				)
+			);
+		} else {
+			$qb->andWhere(
+				$qb->expr()->orX(
+					$qb->expr()->eq('uid_owner', $qb->createNamedParameter($userId)),
+					$qb->expr()->eq('uid_initiator', $qb->createNamedParameter($userId))
+				)
+			);
+		}
+
+		$qb->andWhere($qb->expr()->in('file_source', $qb->createParameter('file_source_ids')));
+		$qb->setParameter('file_source_ids', $nodeIDs, IQueryBuilder::PARAM_INT_ARRAY);
+
+		$qb->orderBy('id');
+
+		$cursor = $qb->execute();
+		$shares = [];
+		while($data = $cursor->fetch()) {
+			$shares[] = $this->createShareObject($data);
+		}
+		$cursor->closeCursor();
+
+		return $shares;
 	}
 	
 	/**

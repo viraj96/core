@@ -462,7 +462,7 @@ class DefaultShareProvider implements IShareProvider {
 	/**
 	 * @inheritdoc
 	 */
-	public function getAllSharesBy($userId, $shareTypes, $node, $reshares) {
+	public function getAllSharesBy($userId, $shareTypes, $nodeIDs, $reshares) {
 		$qb = $this->dbConn->getQueryBuilder();
 		$qb->select('*')
 			->from('share')
@@ -493,9 +493,8 @@ class DefaultShareProvider implements IShareProvider {
 			);
 		}
 
-		if ($node !== null) {
-			$qb->andWhere($qb->expr()->eq('file_source', $qb->createNamedParameter($node->getId())));
-		}
+		$qb->andWhere($qb->expr()->in('file_source', $qb->createParameter('file_source_ids')));
+		$qb->setParameter('file_source_ids', $nodeIDs, IQueryBuilder::PARAM_INT_ARRAY);
 
 		$qb->orderBy('id');
 

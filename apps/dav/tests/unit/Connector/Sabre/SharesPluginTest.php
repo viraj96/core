@@ -96,6 +96,9 @@ class SharesPluginTest extends \Test\TestCase {
 
 		// node API nodes
 		$node = $this->createMock('\OCP\Files\Folder');
+		$node->expects($this->any())
+			->method('getId')
+			->will($this->returnValue(123));
 
 		$this->userFolder->expects($this->once())
 			->method('get')
@@ -121,6 +124,7 @@ class SharesPluginTest extends \Test\TestCase {
 				foreach($requestedShareTypes as $requestedShareType){
 					$share = $this->createMock(IShare::class);
 					$share->method('getShareType')->willReturn($requestedShareType);
+					$share->method('getNodeId')->willReturn(123);
 					if (in_array($requestedShareType, $shareTypes)) {
 						array_push($allShares, $share);
 					}
@@ -209,7 +213,7 @@ class SharesPluginTest extends \Test\TestCase {
 			\OCP\Share::SHARE_TYPE_LINK,
 			\OCP\Share::SHARE_TYPE_REMOTE
 		];
-		
+
 		$this->shareManager->expects($this->any())
 			->method('getAllSharesBy')
 			->with(
@@ -222,6 +226,7 @@ class SharesPluginTest extends \Test\TestCase {
 				foreach($requestedShareTypes as $requestedShareType){
 					$share = $this->createMock(IShare::class);
 					$share->method('getShareType')->willReturn($requestedShareType);
+					$share->method('getNodeId')->willReturn(111);
 					if (in_array($requestedShareType, $shareTypes)) {
 						array_push($allShares, $share);
 					}

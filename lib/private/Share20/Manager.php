@@ -880,40 +880,37 @@ class Manager implements IManager {
 	/**
 	 * @inheritdoc
 	 */
-	public function getAllSharesBy($userId, $shareTypes, $node, $reshares = false) {
-		// This function requires correct path
-		if (!($node instanceof \OCP\Files\File) &&
-			!($node instanceof \OCP\Files\Folder)) {
-			throw new \InvalidArgumentException('invalid path');
+	public function getAllSharesBy($userId, $shareTypes, $nodeIDs, $reshares = false) {
+		// This function requires at least 1 node (parent folder)
+		if (empty($nodeIDs)) {
+			throw new \InvalidArgumentException('Array of nodeIDs empty');
 		}
 		// This will ensure that if there are multiple share providers for the same share type, we will execute it in batches
 		$shares = array();
-		$providerMap = array();
+		$providerIdMap = array();
 		foreach ($shareTypes as $shareType) {
 			// Get provider and its ID, at this point provider is cached at IProviderFactory instance
 			$provider = $this->factory->getProviderForType($shareType);
 			$providerId = $provider->identifier();
 
 			// Create a key -> multi value map
-			if (!isset($providerMap[$providerId])) {
-				$providerMap[$providerId] = array();
+			if (!isset($providerIdMap[$providerId])) {
+				$providerIdMap[$providerId] = array();
 			}
-			array_push($providerMap[$providerId], $shareType);
+			array_push($providerIdMap[$providerId], $shareType);
 		}
 
-		foreach ($providerMap as $providerId => $shareTypeArray) {
+		foreach ($providerIdMap as $providerId => $shareTypeArray) {
 			// Get provider from cache
 			$provider = $this->factory->getProvider($providerId);
-			if (sizeof($shareTypeArray) === 1) {
-				$limit = 1;
-				$offset = 0;
-				$queriedShares = $provider->getSharesBy($userId, $shareTypeArray[0], $node, $reshares, $limit, $offset);
-			} else {
-				$queriedShares = $provider->getAllSharesBy($userId, $shareTypeArray, $node, $reshares);
+			$batchNodeIDs = array_chunk($nodeIDs, 100);
+			foreach ($batchNodeIDs as $nodeIDsChunk) {
+				$queriedShares = $provider->getAllSharesBy($userId, $shareTypeArray, $nodeIDsChunk, $reshares);
+				foreach ($queriedShares as $queriedShare){
+					array_push($shares, $queriedShare);
+				}
 			}
-			foreach ($queriedShares as $queriedShare){
-				array_push($shares, $queriedShare);
-			}
+
 		}
 
 		// Ensure to delete expired shares. Please note that here $node is obligatory and we will receive only shares belonging to one node
