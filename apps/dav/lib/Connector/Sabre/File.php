@@ -57,6 +57,24 @@ use Sabre\DAV\IFile;
 
 class File extends Node implements IFile {
 
+	protected $request;
+	
+	/**
+	 * Sets up the node, expects a full path name
+	 *
+	 * @param \OC\Files\View $view
+	 * @param \OCP\Files\FileInfo $info
+	 * @param IManager $shareManager
+	 */
+	public function __construct($view, $info, IManager $shareManager = null, \OC\AppFramework\Http\Request $request = null) {
+		if (isset($request)) {
+			$this->request = $request;
+		} else {
+			$this->request = \OC::$server->getRequest();
+		}
+		parent::__construct($view, $info, $shareManager);
+	}
+	
 	/**
 	 * Updates the data
 	 *
@@ -204,10 +222,9 @@ class File extends Node implements IFile {
 			}
 
 			// allow sync clients to send the mtime along in a header
-			$request = \OC::$server->getRequest();
-			if (isset($request->server['HTTP_X_OC_MTIME'])) {
-				if( is_int($request->server['HTTP_X_OC_MTIME']) ) {
-					if ($this->fileView->touch($this->path, $request->server['HTTP_X_OC_MTIME'])) {
+			if (isset($this->request->server['HTTP_X_OC_MTIME'])) {
+				if( is_int($this->request->server['HTTP_X_OC_MTIME']) ) {
+					if ($this->fileView->touch($this->path, $this->request->server['HTTP_X_OC_MTIME'])) {
 						header('X-OC-MTime: accepted');
 					}
 				}
@@ -222,8 +239,8 @@ class File extends Node implements IFile {
 			
 			$this->refreshInfo();
 
-			if (isset($request->server['HTTP_OC_CHECKSUM'])) {
-				$checksum = trim($request->server['HTTP_OC_CHECKSUM']);
+			if (isset($this->request->server['HTTP_OC_CHECKSUM'])) {
+				$checksum = trim($this->request->server['HTTP_OC_CHECKSUM']);
 				$this->fileView->putFileInfo($this->path, ['checksum' => $checksum]);
 				$this->refreshInfo();
 			} else if ($this->getChecksum() !== null && $this->getChecksum() !== '') {
@@ -462,10 +479,9 @@ class File extends Node implements IFile {
 				}
 
 				// allow sync clients to send the mtime along in a header
-				$request = \OC::$server->getRequest();
-				if (isset($request->server['HTTP_X_OC_MTIME'])) {
-					if( is_int($request->server['HTTP_X_OC_MTIME']) ) {
-						if ($targetStorage->touch($targetInternalPath, $request->server['HTTP_X_OC_MTIME'])) {
+				if (isset($this->request->server['HTTP_X_OC_MTIME'])) {
+					if( is_int($this->request->server['HTTP_X_OC_MTIME']) ) {
+						if ($targetStorage->touch($targetInternalPath, $this->request->server['HTTP_X_OC_MTIME'])) {
 							header('X-OC-MTime: accepted');
 						}
 					}
@@ -484,8 +500,8 @@ class File extends Node implements IFile {
 				// FIXME: should call refreshInfo but can't because $this->path is not the of the final file
 				$info = $this->fileView->getFileInfo($targetPath);
 
-				if (isset($request->server['HTTP_OC_CHECKSUM'])) {
-					$checksum = trim($request->server['HTTP_OC_CHECKSUM']);
+				if (isset($this->request->server['HTTP_OC_CHECKSUM'])) {
+					$checksum = trim($this->request->server['HTTP_OC_CHECKSUM']);
 					$this->fileView->putFileInfo($targetPath, ['checksum' => $checksum]);
 				} else if ($info->getChecksum() !== null && $info->getChecksum() !== '') {
 					$this->fileView->putFileInfo($this->path, ['checksum' => '']);

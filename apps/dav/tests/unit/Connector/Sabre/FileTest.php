@@ -62,6 +62,13 @@ class FileTest extends TestCase {
 	 */
 	private $user;
 
+	/** @var ISecureRandom | \PHPUnit_Framework_MockObject_MockObject */
+	protected $secureRandom;
+	/** @var IConfig | \PHPUnit_Framework_MockObject_MockObject */
+	protected $config;
+	/** @var CsrfTokenManager | \PHPUnit_Framework_MockObject_MockObject */
+	protected $csrfTokenManager;
+	
 	public function setUp() {
 		parent::setUp();
 		unset($_SERVER['HTTP_OC_CHUNKED']);
@@ -75,6 +82,11 @@ class FileTest extends TestCase {
 		$userManager->createUser($this->user, 'pass');
 
 		$this->loginAsUser($this->user);
+		
+		$this->secureRandom = $this->getMockBuilder('\OCP\Security\ISecureRandom')->getMock();
+		$this->config = $this->getMockBuilder('\OCP\IConfig')->getMock();
+		$this->csrfTokenManager = $this->getMockBuilder('\OC\Security\CSRF\CsrfTokenManager')
+		->disableOriginalConstructor()->getMock();
 	}
 
 	public function tearDown() {
@@ -297,7 +309,7 @@ class FileTest extends TestCase {
 	 *
 	 * @return null|string of the PUT operaiton which is usually the etag
 	 */
-	private function doPut($path, $viewRoot = null) {
+	private function doPut($path, $viewRoot = null, \OC\AppFramework\Http\Request $request = null) {
 		$view = Filesystem::getView();
 		if (!is_null($viewRoot)) {
 			$view = new View($viewRoot);
@@ -313,7 +325,7 @@ class FileTest extends TestCase {
 			null
 		);
 
-		$file = new File($view, $info);
+		$file = new File($view, $info, null, $request);
 
 		// beforeMethod locks
 		$view->lockFile($path, ILockingProvider::LOCK_SHARED);
@@ -333,6 +345,95 @@ class FileTest extends TestCase {
 		$this->assertNotEmpty($this->doPut('/foo.txt'));
 	}
 
+	/**
+	 * Test putting a file with string Mtime
+	 * @runInSeparateProcess
+	 */
+	public function testPutSingleFileStringMtime() {
+		$this->expectException(\Sabre\DAV\Exception\BadRequest::class);
+		$request = new \OC\AppFramework\Http\Request([
+				'server' => [
+						'HTTP_X_OC_MTIME' => 'string',
+				]
+		], $this->secureRandom, $this->config, $this->csrfTokenManager);
+		
+		$this->doPut('/foo.txt',null,$request);
+	}
+	
+	/**
+	 * Test putting a file with float Mtime
+	 * @runInSeparateProcess
+	 */
+	public function testPutSingleFileFloatMtime() {
+		$this->expectException(\Sabre\DAV\Exception\BadRequest::class);
+		$request = new \OC\AppFramework\Http\Request([
+				'server' => [
+						'HTTP_X_OC_MTIME' => 34.56,
+				]
+		], $this->secureRandom, $this->config, $this->csrfTokenManager);
+		
+		$this->doPut('/foo.txt',null,$request);
+	}
+
+	/**
+	 * Test putting a file with negative float Mtime
+	 * @runInSeparateProcess
+	 */
+	public function testPutSingleFileNegativeFloatMtime() {
+		$this->expectException(\Sabre\DAV\Exception\BadRequest::class);
+		$request = new \OC\AppFramework\Http\Request([
+				'server' => [
+						'HTTP_X_OC_MTIME' => -34.56,
+				]
+		], $this->secureRandom, $this->config, $this->csrfTokenManager);
+		
+		$this->doPut('/foo.txt',null,$request);
+	}
+	
+	
+	/**
+	 * Test putting a file with int Mtime
+	 * @runInSeparateProcess
+	 */
+	public function testPutSingleFileIntMtime() {
+		$request = new \OC\AppFramework\Http\Request([
+				'server' => [
+						'HTTP_X_OC_MTIME' => 3456,
+				]
+		], $this->secureRandom, $this->config, $this->csrfTokenManager);
+		
+		$this->assertNotEmpty($this->doPut('/foo.txt',null,$request));
+	}
+	
+	/**
+	 * Test putting a file with negative Mtime
+	 * @runInSeparateProcess
+	 */
+	public function testPutSingleFileNegativeMtime() {
+		$this->expectException(\Sabre\DAV\Exception\BadRequest::class);
+		$request = new \OC\AppFramework\Http\Request([
+				'server' => [
+						'HTTP_X_OC_MTIME' => -3456,
+				]
+		], $this->secureRandom, $this->config, $this->csrfTokenManager);
+		
+		$this->doPut('/foo.txt',null,$request);
+	}
+	
+	/**
+	 * Test putting a file with string that can be casted to int Mtime
+	 * @runInSeparateProcess
+	 */
+	public function testPutSingleFileStringThatCanBeCastedToIntMtime() {
+		$request = new \OC\AppFramework\Http\Request([
+				'server' => [
+						'HTTP_X_OC_MTIME' => '3456',
+				]
+		], $this->secureRandom, $this->config, $this->csrfTokenManager);
+		
+		$this->assertNotEmpty($this->doPut('/foo.txt',null,$request));
+	}
+	
 	/**
 	 * Test putting a file using chunking
 	 */
